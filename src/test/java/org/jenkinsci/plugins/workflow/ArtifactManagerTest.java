@@ -178,7 +178,7 @@ public class ArtifactManagerTest {
             assertEquals(root, file.getParent());
             VirtualFile some = root.child("some");
             assertEquals("some", some.getName());
-            assertDir(some);
+            assertDir(some, listener);
             assertEquals(root, some.getParent());
             assertThat(root.list(), arrayContainingInAnyOrder(file, some, root.child("otherdir"), root.child(".git")));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
@@ -187,7 +187,7 @@ public class ArtifactManagerTest {
             assertFile(subfile, "content", listener);
             VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
             assertEquals("dir", someDeeplyNestedDir.getName());
-            assertDir(someDeeplyNestedDir);
+            assertDir(someDeeplyNestedDir, listener);
             assertEquals(some, someDeeplyNestedDir.getParent().getParent().getParent());
             assertEquals(Collections.singletonList(subfile), Arrays.asList(someDeeplyNestedDir.list()));
             assertThat(someDeeplyNestedDir.list("subfile", null, false), containsInAnyOrder("subfile"));
@@ -204,9 +204,10 @@ public class ArtifactManagerTest {
     }
 
     private static void assertFile(VirtualFile f, String contents, TaskListener listener) throws IOException {
-        assertTrue(f.isFile());
-        assertFalse(f.isDirectory());
-        assertTrue(f.exists());
+        listener.getLogger().println("Asserting file: " + f);
+        assertTrue("Not a file: " + f, f.isFile());
+        assertFalse("Unexpected directory: " + f, f.isDirectory());
+        assertTrue("Does not exist: " + f, f.exists());
         assertEquals(contents.length(), f.length());
         assertThat(f.lastModified(), not(is(0)));
         try (InputStream is = f.open()) {
@@ -221,17 +222,18 @@ public class ArtifactManagerTest {
         }
     }
 
-    private static void assertDir(VirtualFile f) throws IOException {
-        assertFalse(f.isFile());
-        assertTrue(f.isDirectory());
-        assertTrue(f.exists());
+    private static void assertDir(VirtualFile f, TaskListener listener) throws IOException {
+        listener.getLogger().println("Asserting dir: " + f);
+        assertFalse("Unexpected file: " + f, f.isFile());
+        assertTrue("Not a directory: " + f, f.isDirectory());
+        assertTrue("Does not exist: " + f, f.exists());
         // length & lastModified may or may not be defined
     }
 
     private static void assertNonexistent(VirtualFile f) throws IOException {
-        assertFalse(f.isFile());
-        assertFalse(f.isDirectory());
-        assertFalse(f.exists());
+        assertFalse("Unexpected file: " + f, f.isFile());
+        assertFalse("Unexpected dir: " + f, f.isDirectory());
+        assertFalse("Unexpectedly exists: " + f, f.exists());
         try {
             assertEquals(0, f.length());
         } catch (IOException x) {
